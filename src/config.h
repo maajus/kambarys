@@ -47,10 +47,10 @@ int OUT_PINS[OUT_PINS_COUNT] = {
 
 // buttons
 int IN_PINS[IN_PINS_COUNT] = {
-  12,  // D6
-  13,  // D7
-  1,   // D9 TX pin
-  3,   // D10 RX pin
+  12,  // D6 Pirmas mygtukas
+  13,  // D7 Trecias mygtukas (viduj)
+  3,   // D10 (RX pin) antras mygtukas
+  1,   // D9 TX pin  PIR
 };
 
 #endif
