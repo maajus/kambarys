@@ -6,20 +6,20 @@ unsigned long DebounceLastTime[IN_PINS_COUNT] = {0};
 void init_io(){
 
     pinMode(IN_PINS[0], INPUT_PULLUP);
-    attachInterrupt(IN_PINS[0], interrupt0, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[0]), interrupt0, FALLING);
 
     // pinMode(IN_PINS[1], INPUT_PULLUP);
     // attachInterrupt(IN_PINS[1], interrupt1, FALLING);
 
     pinMode(IN_PINS[2], INPUT_PULLUP);
-    attachInterrupt(IN_PINS[2], interrupt2, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[2]), interrupt2, FALLING);
 
 #if defined(KORIDORIUS) || defined(VONIA)
     pinMode(IN_PINS[3], INPUT);
-    attachInterrupt(IN_PINS[3], interrupt3, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, CHANGE);
 #else
     pinMode(IN_PINS[3], INPUT_PULLUP);
-    attachInterrupt(IN_PINS[3], interrupt3, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, FALLING);
 #endif
 
     pinMode(LED_PIN, OUTPUT);
@@ -78,6 +78,7 @@ int toggle_all(int val){
 
 void ICACHE_RAM_ATTR interrupt0(void){
 
+  noInterrupts();
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
@@ -92,10 +93,12 @@ void ICACHE_RAM_ATTR interrupt0(void){
     #endif
   }
   DebounceLastTime[0] = interrupt_time;
+  interrupts();
 }
 
 void ICACHE_RAM_ATTR interrupt1(void){
 
+  noInterrupts();
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
@@ -108,12 +111,14 @@ void ICACHE_RAM_ATTR interrupt1(void){
     #endif
   }
   DebounceLastTime[1] = interrupt_time;
+  interrupts();
 }
 
 
 
 void ICACHE_RAM_ATTR interrupt2(void){
 
+  noInterrupts();
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
@@ -122,10 +127,12 @@ void ICACHE_RAM_ATTR interrupt2(void){
     toggle_output(1);
   }
   DebounceLastTime[3] = interrupt_time;
+  interrupts();
 }
 
 void ICACHE_RAM_ATTR interrupt3(void){
 
+  noInterrupts();
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
@@ -140,4 +147,5 @@ void ICACHE_RAM_ATTR interrupt3(void){
     #endif
   }
   DebounceLastTime[2] = interrupt_time;
+  interrupts();
 }
