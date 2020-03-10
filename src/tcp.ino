@@ -41,8 +41,26 @@ void tcp_listen(){
                 return;
             }
 
+            if(req == 'P'){
+                pirTimeout = wifi_client.read()-48 *10000;
+                // wifi_client.write();
+                return;
+            }
+
+
             while(wifi_client.read()!=-1);
 
         }
     }
+}
+
+void tcp_write_string(const char* string){
+
+  if (!wifi_client.connected()) {
+        // try to connect to a new client
+        wifi_client = server.available();
+    } else {
+    wifi_client.write(string, strlen(string));
+    }
+
 }

@@ -188,6 +188,7 @@ void loop()
     //
     keeplive();   //necessary to call keep alive for proper functioning
     tcp_listen();
+    check_io_timeouts();
 
 
     //update info every UPDATE_INTERVAL

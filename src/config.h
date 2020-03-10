@@ -23,6 +23,8 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 #ifdef VONIA
 
 #define HOSTNAME "vonia"
+#define PIR_TIMEOUT   60000 //10s
+#define PIR_DEBOUNCE_TIMEOUT 3000 //3s
 
 // Some SSR are active low...
 #define LIGHTS_ON     1

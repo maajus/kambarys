@@ -1,29 +1,32 @@
 #include "config.h"
 
-unsigned long DebounceLastTime[IN_PINS_COUNT] = {0};
+unsigned long debounceLastTime = 0;
+unsigned long pirStartTime = 0;
+unsigned long pirTimeout = PIR_TIMEOUT;
+unsigned long ledsOffTime = 0;
 
 
 void init_io(){
 
     pinMode(IN_PINS[0], INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[0]), interrupt0, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[0]), interrupt, FALLING);
 
-    // pinMode(IN_PINS[1], INPUT_PULLUP);
-    // attachInterrupt(IN_PINS[1], interrupt1, FALLING);
+    pinMode(IN_PINS[1], INPUT_PULLUP);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[1]), interrupt, FALLING);
 
     pinMode(IN_PINS[2], INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[2]), interrupt2, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[2]), interrupt, FALLING);
 
 #if defined(KORIDORIUS) || defined(VONIA)
     pinMode(IN_PINS[3], INPUT);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt, RISING);
 #else
     pinMode(IN_PINS[3], INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt, FALLING);
 #endif
 
-    pinMode(LED_PIN, OUTPUT);
-    digitalWrite(LED_PIN, HIGH);
+    // pinMode(LED_PIN, OUTPUT);
+    // digitalWrite(LED_PIN, HIGH);
     for(int i = 0; i < OUT_PINS_COUNT; i++){
       pinMode(OUT_PINS[i], OUTPUT);
       digitalWrite(OUT_PINS[i], LIGHTS_OFF);
@@ -76,76 +79,70 @@ int toggle_all(int val){
 }
 
 
-void ICACHE_RAM_ATTR interrupt0(void){
+void ICACHE_RAM_ATTR interrupt(void){
 
-  noInterrupts();
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - DebounceLastTime[0] > DEBOUNCE_DELAY_MS)
+  if (interrupt_time - debounceLastTime > DEBOUNCE_DELAY_MS)
   {
-    int val = toggle_output(0);
-    #ifdef VONIA
-    write_output(1, val); //toggle leds
-    write_output(2, val); //toggle fan
-    if(val == LIGHTS_OFF)
-      write_output(3, LIGHTS_OFF); //turn off mirror
-    #endif
+    if(digitalRead(IN_PINS[0]) == LOW){
+      int val = toggle_output(0);
+#ifdef VONIA
+      write_output(1, val); //toggle leds
+      write_output(2, val); //toggle fan
+      if(val == LIGHTS_OFF){
+        write_output(3, LIGHTS_OFF); //turn off mirror
+        ledsOffTime = millis(); //save off time for PIR "debounce"
+      }
+#endif
+    }
+    if(digitalRead(IN_PINS[1]) == LOW){
+      toggle_output(2);
+    }
+    if(digitalRead(IN_PINS[2]) == LOW){
+      int val = toggle_output(1);
+      pirStartTime = 0;
+      if(val == LIGHTS_OFF)
+        ledsOffTime = millis(); //save off time for PIR "debounce"
+
+    }
+    else if(digitalRead(IN_PINS[3]) == HIGH){
+      if(millis() - ledsOffTime > PIR_DEBOUNCE_TIMEOUT){
+        write_output(1, LIGHTS_ON);
+        pirStartTime = millis();
+      }
+    }
   }
-  DebounceLastTime[0] = interrupt_time;
-  interrupts();
+  debounceLastTime = interrupt_time;
 }
 
-void ICACHE_RAM_ATTR interrupt1(void){
-
-  noInterrupts();
-  unsigned long interrupt_time = millis();
-
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - DebounceLastTime[1] > DEBOUNCE_DELAY_MS)
-  {
-    #ifdef VONIA
-    //toggle only if lights are on or to turn off only
-    // if(digitalRead(OUT_PINS[0]) || digitalRead(OUT_PINS[3]) )
-    toggle_output(2);
-    #endif
+void check_io_timeouts(){
+  //leds are on & main light is off & timeout is active & timeout occured
+  if(digitalRead(OUT_PINS[1]) && !digitalRead(OUT_PINS[0]) &&
+  ((millis() - pirStartTime) > pirTimeout) && pirStartTime > 0){
+      write_output(1, LIGHTS_OFF);
+      ledsOffTime = millis(); //save off time for PIR "debounce"
   }
-  DebounceLastTime[1] = interrupt_time;
-  interrupts();
 }
 
-
-
-void ICACHE_RAM_ATTR interrupt2(void){
-
-  noInterrupts();
-  unsigned long interrupt_time = millis();
-
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - DebounceLastTime[3] > DEBOUNCE_DELAY_MS)
-  {
-    toggle_output(1);
-  }
-  DebounceLastTime[3] = interrupt_time;
-  interrupts();
-}
-
-void ICACHE_RAM_ATTR interrupt3(void){
-
-  noInterrupts();
-  unsigned long interrupt_time = millis();
-
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if (interrupt_time - DebounceLastTime[2] > DEBOUNCE_DELAY_MS)
-  {
-    #ifdef VONIA
-    //PIR interrupt
-    bool pir_value = digitalRead(IN_PINS[3]);
-    bool main_lights_value = digitalRead(OUT_PINS[0]);
-    if(main_lights_value == LIGHTS_OFF) //i
-      write_output(1, pir_value);
-    #endif
-  }
-  DebounceLastTime[2] = interrupt_time;
-  interrupts();
-}
+//
+// void ICACHE_RAM_ATTR interrupt3(void){
+//
+//   noInterrupts();
+//   unsigned long interrupt_time = millis();
+//
+//   // If interrupts come faster than 200ms, assume it's a bounce and ignore
+//   if (interrupt_time - DebounceLastTime[2] > DEBOUNCE_DELAY_MS)
+//   {
+//     #ifdef VONIA
+//     //PIR interrupt
+//     bool pir_value = digitalRead(IN_PINS[3]);
+//     bool main_lights_value = digitalRead(OUT_PINS[0]);
+//     if(main_lights_value == LIGHTS_OFF) //i
+//       write_output(1, pir_value);
+//     #endif
+//   }
+//   DebounceLastTime[2] = interrupt_time;
+//   interrupts();
+// }
