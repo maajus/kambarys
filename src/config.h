@@ -11,7 +11,7 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 #define DHTTYPE DHT22   // DHT 11
 #define TCP_PORT 5555
 #define UPDATE_INTERVAL 30000
-#define DEBOUNCE_DELAY_MS 250
+#define DEBOUNCE_DELAY_MS 450
 
 //Button pins
 // #define BUTTON0  12 //D6
@@ -24,7 +24,7 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 
 #define HOSTNAME "vonia"
 #define PIR_TIMEOUT   60000 //10s
-#define PIR_DEBOUNCE_TIMEOUT 3000 //3s
+#define PIR_DEBOUNCE_TIMEOUT 5000 //3s
 
 // Some SSR are active low...
 #define LIGHTS_ON     1

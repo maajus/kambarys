@@ -47,6 +47,12 @@ void tcp_listen(){
                 return;
             }
 
+            if(req == 'D'){
+                pirDebounce = wifi_client.read()-48 *10000;
+                // wifi_client.write();
+                return;
+            }
+
 
             while(wifi_client.read()!=-1);
 
