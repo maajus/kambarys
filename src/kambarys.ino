@@ -188,7 +188,9 @@ void loop()
     //
     keeplive();   //necessary to call keep alive for proper functioning
     tcp_listen();
+    #if defined(VONIA) || defined(KORIDORIUS)
     check_io_timeouts();
+    #endif
 
 
     //update info every UPDATE_INTERVAL

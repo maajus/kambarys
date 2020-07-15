@@ -1,7 +1,7 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#define VONIA
+#define MIEGAMASIS
 
 
 const char* WIFI_SSID = "Stotis";
@@ -11,7 +11,7 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 #define DHTTYPE DHT22   // DHT 11
 #define TCP_PORT 5555
 #define UPDATE_INTERVAL 30000
-#define DEBOUNCE_DELAY_MS 450
+#define DEBOUNCE_DELAY_MS 300
 
 //Button pins
 // #define BUTTON0  12 //D6
@@ -27,11 +27,11 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 #define PIR_DEBOUNCE_TIMEOUT 5000 //3s
 
 // Some SSR are active low...
-#define LIGHTS_ON     1
-#define LIGHTS_OFF    0
+#define LIGHTS_ON     0
+#define LIGHTS_OFF    1
 
 // DHT Sensor
-#define DHT_PIN       2 //D4
+#define DHT_PIN       2 //D4 blogas pinas, supisa DHT boot metu
 // LED pin
 #define LED_PIN       14 //D5
 
@@ -50,14 +50,48 @@ int OUT_PINS[OUT_PINS_COUNT] = {
 // buttons
 int IN_PINS[IN_PINS_COUNT] = {
   12,  // D6 Pirmas mygtukas
+  13,  // D7 Vidurinis mygtukas
+  3,   // D10 Trecias mygtukas
+  1,   // D9
+};
+
+#endif
+
+
+#ifdef MIEGAMASIS
+
+#define HOSTNAME "miegamasis"
+
+// Some SSR are active low...
+#define LIGHTS_ON     1
+#define LIGHTS_OFF    0
+
+// DHT Sensor
+#define DHT_PIN       14 //D5
+// LED pin
+// #define LED_PIN       14 //D5
+
+
+#define OUT_PINS_COUNT  4
+#define IN_PINS_COUNT  4
+
+// ssr control
+int OUT_PINS[OUT_PINS_COUNT] = {
+  16, // D0 Lubos
+  0,  // D3 Simos puse
+  4,  // D2 Justo puse
+  5,  // D1 Sudeges ssr
+};
+
+// buttons
+int IN_PINS[IN_PINS_COUNT] = {
+  12,  // D6 Pirmas mygtukas
   13,  // D7 Trecias mygtukas (viduj)
   3,   // D10 (RX pin) antras mygtukas
   1,   // D9 TX pin  PIR
 };
 
 #endif
-
-
 
 
 #endif

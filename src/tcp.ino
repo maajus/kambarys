@@ -12,7 +12,7 @@ void tcp_listen(){
         if (wifi_client.available() > 0) {
             char req = wifi_client.read();
             if(req == 'L'){
-                wifi_client.write(toggle_output(wifi_client.read()-48)+48);
+                wifi_client.write((toggle_output(wifi_client.read()-48) == LIGHTS_ON)+48);
                 return;
             }
             if(req == 'H'){
@@ -31,8 +31,10 @@ void tcp_listen(){
             if(req == 'A'){
                 char buf [30] = {0};
                 sprintf (buf, "A%2.1f_%2.1f_%d_%d_%d_%d",temp,humidity,
-                digitalRead(OUT_PINS[0]) ,digitalRead(OUT_PINS[1]),
-                digitalRead(OUT_PINS[2]) ,digitalRead(OUT_PINS[3]));
+                read_output(0) == LIGHTS_ON,
+                read_output(1) == LIGHTS_ON,
+                read_output(2) == LIGHTS_ON,
+                read_output(3) == LIGHTS_ON);
                 wifi_client.write((const char*)&buf[0],strlen(buf));
                 return;
             }
@@ -41,6 +43,7 @@ void tcp_listen(){
                 return;
             }
 
+            #if defined(VONIA) || defined(KORIDORIUS)
             if(req == 'P'){
                 pirTimeout = wifi_client.read()-48 *10000;
                 // wifi_client.write();
@@ -52,6 +55,7 @@ void tcp_listen(){
                 // wifi_client.write();
                 return;
             }
+            #endif
 
 
             while(wifi_client.read()!=-1);
