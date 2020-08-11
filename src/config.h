@@ -1,7 +1,9 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
-#define MIEGAMASIS
+//#define MIEGAMASIS
+//#define VONIA
+#define KORIDORIUS
 
 
 const char* WIFI_SSID = "Stotis";
@@ -31,9 +33,9 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 #define LIGHTS_OFF    1
 
 // DHT Sensor
-#define DHT_PIN       2 //D4 blogas pinas, supisa DHT boot metu
+#define DHT_PIN       14 //D5
 // LED pin
-#define LED_PIN       14 //D5
+// #define LED_PIN       14 //D5
 
 
 #define OUT_PINS_COUNT  4
@@ -89,6 +91,46 @@ int IN_PINS[IN_PINS_COUNT] = {
   13,  // D7 Trecias mygtukas (viduj)
   3,   // D10 (RX pin) antras mygtukas
   1,   // D9 TX pin  PIR
+};
+
+#endif
+
+
+
+
+#ifdef KORIDORIUS
+
+#define HOSTNAME "koridorius"
+#define PIR_TIMEOUT   60000 //10s
+#define PIR_DEBOUNCE_TIMEOUT 5000 //3s
+
+// Some SSR are active low...
+#define LIGHTS_ON     0
+#define LIGHTS_OFF    1
+
+// DHT Sensor
+#define DHT_PIN       14 //D5
+// LED pin
+// #define LED_PIN       14 //D5
+
+
+#define OUT_PINS_COUNT  4
+#define IN_PINS_COUNT  4
+
+// ssr control
+int OUT_PINS[OUT_PINS_COUNT] = {
+  16, // D0 Sandeliuks
+  5,  // D1 Koridorius
+  4,  // D2 Koridorius prie duru
+  0,  // N/A
+};
+
+// buttons
+int IN_PINS[IN_PINS_COUNT] = {
+  12,  // D6 Sandelio mygtukas
+  13,  // D7 Vidurinis mygtukas
+  3,   // D10 Trecias mygtukas
+  1,   // D9
 };
 
 #endif

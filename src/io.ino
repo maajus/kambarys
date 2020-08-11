@@ -1,9 +1,10 @@
 #include "config.h"
 
 unsigned long debounceLastTime = 0;
+unsigned long debounceLastTime1 = 0;
 unsigned long pirStartTime = 0;
 unsigned long ledsOffTime = 0;
-#ifdef VONIA
+#if defined(VONIA) || defined(KORIDORIUS)
 unsigned long pirTimeout = PIR_TIMEOUT;
 unsigned long pirDebounce = PIR_DEBOUNCE_TIMEOUT;
 #endif
@@ -13,24 +14,22 @@ unsigned long pirDebounce = PIR_DEBOUNCE_TIMEOUT;
 void init_io(){
 
     pinMode(IN_PINS[0], INPUT_PULLUP);
-    attachInterrupt(IN_PINS[0], interrupt1, FALLING);
+    attachInterrupt(IN_PINS[0], interrupt0, FALLING);
 
     pinMode(IN_PINS[1], INPUT_PULLUP);
-    attachInterrupt(IN_PINS[1], interrupt2, FALLING);
+    attachInterrupt(IN_PINS[1], interrupt1, FALLING);
 
     pinMode(IN_PINS[2], INPUT_PULLUP);
-    attachInterrupt((IN_PINS[2]), interrupt3, FALLING);
+    attachInterrupt((IN_PINS[2]), interrupt2, FALLING);
 
-#if defined(KORIDORIUS) || defined(VONIA)
+#if defined(VONIA)
     pinMode(IN_PINS[3], INPUT);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt4, RISING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, RISING);
 #else
     pinMode(IN_PINS[3], INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt4, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, FALLING);
 #endif
 
-    // pinMode(LED_PIN, OUTPUT);
-    // digitalWrite(LED_PIN, HIGH);
     for(int i = 0; i < OUT_PINS_COUNT; i++){
       pinMode(OUT_PINS[i], OUTPUT);
       digitalWrite(OUT_PINS[i], LIGHTS_OFF);
@@ -95,101 +94,124 @@ int toggle_all(int val){
 }
 
 
+ICACHE_RAM_ATTR void interrupt0(void){
+
+  // tcp_write_string("int0\n");
+  unsigned long interrupt_time = millis();
+
+  // If interrupts come faster than 200ms, assume it's a bounce and ignore
+  if ((interrupt_time - debounceLastTime1) > DEBOUNCE_DELAY_MS && !digitalRead(IN_PINS[0]))
+  {
+    debounceLastTime1 = interrupt_time;
+    debounceLastTime = interrupt_time;
+    toggle_output(0);
+#ifdef VONIA
+    int val = read_output(0);
+    write_output(1, val); //toggle leds
+    write_output(2, val); //toggle fan
+    if(val == LIGHTS_OFF){
+      write_output(3, LIGHTS_OFF); //turn off mirror
+      ledsOffTime = millis(); //save off time for PIR "debounce"
+    }
+#endif
+  }
+
+}
+
+
 ICACHE_RAM_ATTR void interrupt1(void){
 
-  noInterrupts();
   // tcp_write_string("int1\n");
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS)
+  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS && !digitalRead(IN_PINS[1]))
   {
-      toggle_output(0);
-      int val = read_output(0);
       debounceLastTime = interrupt_time;
-#ifdef VONIA
-      write_output(1, val); //toggle leds
-      write_output(2, val); //toggle fan
-      if(val == LIGHTS_OFF){
-        write_output(3, LIGHTS_OFF); //turn off mirror
-        ledsOffTime = millis(); //save off time for PIR "debounce"
-      }
-#endif
+  #ifdef KORIDORIUS
+      toggle_output(1);
+  #else
+      toggle_output(2);
+  #endif
 
   }
-  interrupts();
 }
 
 
 ICACHE_RAM_ATTR void interrupt2(void){
 
-  noInterrupts();
   // tcp_write_string("int2\n");
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS)
+  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS && !digitalRead(IN_PINS[2]))
   {
-      toggle_output(2);
-      debounceLastTime = interrupt_time;
+    debounceLastTime = interrupt_time;
 
+  #ifdef KORIDORIUS
+      toggle_output(2);
+  #else
+      int val = toggle_output(1);
+  #endif
+
+#ifdef VONIA
+    pirStartTime = 0;
+    if(val == LIGHTS_OFF)
+    ledsOffTime = millis(); //save off time for PIR "debounce"
+#endif
   }
-  interrupts();
 }
 
 
 ICACHE_RAM_ATTR void interrupt3(void){
 
-  noInterrupts();
+  // tcp_write_string("int3\n");
   unsigned long interrupt_time = millis();
 
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
   if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS)
   {
-    int val = toggle_output(1);
-    pirStartTime = 0;
-    if(val == LIGHTS_OFF)
-    ledsOffTime = millis(); //save off time for PIR "debounce"
     debounceLastTime = interrupt_time;
-  }
-  interrupts();
-}
 
-
-ICACHE_RAM_ATTR void interrupt4(void){
-
-  noInterrupts();
-  unsigned long interrupt_time = millis();
-
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS)
-  {
-
-#if defined(VONIA) || defined(KORIDORIUS)
+#ifdef VONIA
     if(millis() - ledsOffTime > pirDebounce){
       write_output(1, LIGHTS_ON);
       pirStartTime = millis();
     }
-  #else
+#endif
+#ifdef KORIDORIUS
+      write_output(0, LIGHTS_ON);
+      pirStartTime = millis();
+#endif
+#ifdef MIEGAMASIS
     int val = toggle_output(3);
 #endif
-
-
-    debounceLastTime = interrupt_time;
   }
-  interrupts();
 }
 
 
-#if defined(VONIA) || defined(KORIDORIUS)
+#ifdef VONIA
 void check_io_timeouts(){
   //leds are on & main light is off & timeout is active & timeout occured
   if(read_output(1) == LIGHTS_ON && read_output(0) == LIGHTS_OFF &&
-  ((pirStartTime + pirTimeout) < millis())){
-      write_output(1, LIGHTS_OFF);
+  ((pirStartTime + pirTimeout) < millis()) && pirStartTime > 0){
       debounceLastTime = millis();
+      write_output(1, LIGHTS_OFF);
       ledsOffTime = millis(); //save off time for PIR "debounce"
   }
 }
+#endif
 
+
+
+#ifdef KORIDORIUS
+void check_io_timeouts(){
+  //leds are on & main light is off & timeout is active & timeout occured
+  if(read_output(0) == LIGHTS_ON  &&
+  ((pirStartTime + pirTimeout) < millis()) && pirStartTime > 0){
+      debounceLastTime = millis();
+      write_output(0, LIGHTS_OFF);
+      ledsOffTime = millis(); //save off time for PIR "debounce"
+  }
+}
 #endif
