@@ -2,10 +2,18 @@
 #define _CONFIG_H
 
 //#define MIEGAMASIS
-//#define VONIA
-#define KORIDORIUS
+#define VONIA
+//#define KORIDORIUS
+
+#define DEBUG
 
 
+#define CLICK_MIN_DURATION 150
+#define CLICK_MAX_DURATION 2000
+
+#define STATIC_IP
+#define MQQT
+#define MQQT_SERVER_IP "192.168.1.245"
 const char* WIFI_SSID = "Stotis";
 const char* WIFI_PASSWORD = "turekbabkiu";
 
@@ -13,6 +21,7 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 #define DHTTYPE DHT22   // DHT 11
 #define TCP_PORT 5555
 #define UPDATE_INTERVAL 30000
+#define PUBLISH_INTERVAL 2000
 #define DEBOUNCE_DELAY_MS 300
 
 //Button pins
@@ -24,13 +33,14 @@ const char* WIFI_PASSWORD = "turekbabkiu";
 
 #ifdef VONIA
 
-#define HOSTNAME "vonia"
+#define HOSTNAME "vonia1"
+#define IP_END 237
 #define PIR_TIMEOUT   60000 //10s
 #define PIR_DEBOUNCE_TIMEOUT 5000 //3s
 
 // Some SSR are active low...
-#define LIGHTS_ON     0
-#define LIGHTS_OFF    1
+#define LIGHTS_ON     1
+#define LIGHTS_OFF    0
 
 // DHT Sensor
 #define DHT_PIN       14 //D5

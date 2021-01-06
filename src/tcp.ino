@@ -2,6 +2,8 @@
   Listen for tcp commands
  *******************************/
 
+WiFiClient wifi_client;
+
 void tcp_listen(){
 
     if (!wifi_client.connected()) {

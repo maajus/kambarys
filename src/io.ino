@@ -1,13 +1,6 @@
 #include "config.h"
 
-unsigned long debounceLastTime = 0;
-unsigned long debounceLastTime1 = 0;
-unsigned long pirStartTime = 0;
-unsigned long ledsOffTime = 0;
-#if defined(VONIA) || defined(KORIDORIUS)
-unsigned long pirTimeout = PIR_TIMEOUT;
-unsigned long pirDebounce = PIR_DEBOUNCE_TIMEOUT;
-#endif
+unsigned long intStartTime = 0;
 
 
 
@@ -16,25 +9,31 @@ void init_io(){
     pinMode(IN_PINS[0], INPUT_PULLUP);
     attachInterrupt(IN_PINS[0], interrupt0, FALLING);
 
+#ifndef DEBUG
     pinMode(IN_PINS[1], INPUT_PULLUP);
-    attachInterrupt(IN_PINS[1], interrupt1, FALLING);
+    attachInterrupt(IN_PINS[1], interrupt0, FALLING);
 
     pinMode(IN_PINS[2], INPUT_PULLUP);
-    attachInterrupt((IN_PINS[2]), interrupt2, FALLING);
+    attachInterrupt((IN_PINS[2]), interrupt0, FALLING);
 
-#if defined(VONIA)
+#ifdef VONIA
     pinMode(IN_PINS[3], INPUT);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, RISING);
-#else
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt0, RISING);
+#endif
+#ifdef KORIDORIUS
     pinMode(IN_PINS[3], INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt3, FALLING);
+    attachInterrupt(digitalPinToInterrupt(IN_PINS[3]), interrupt0, FALLING);
+#endif
+#ifdef MIEGAMASIS
+    pinMode(IN_PINS[3], INPUT_PULLUP);
+    attachInterrupt(IN_PINS[3], interrupt0, FALLING);
 #endif
 
+ #endif
     for(int i = 0; i < OUT_PINS_COUNT; i++){
       pinMode(OUT_PINS[i], OUTPUT);
       digitalWrite(OUT_PINS[i], LIGHTS_OFF);
     }
-
 
 }
 
@@ -94,124 +93,118 @@ int toggle_all(int val){
 }
 
 
+
+
+
+
 ICACHE_RAM_ATTR void interrupt0(void){
 
-  // tcp_write_string("int0\n");
-  unsigned long interrupt_time = millis();
+    noInterrupts();
+    unsigned long now = millis();
+    int32_t delta = now - intStartTime;
+    if(delta < 0) delta += 0xFFFFFFFF;
+    if(delta > CLICK_MIN_DURATION){
 
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if ((interrupt_time - debounceLastTime1) > DEBOUNCE_DELAY_MS && !digitalRead(IN_PINS[0]))
-  {
-    debounceLastTime1 = interrupt_time;
-    debounceLastTime = interrupt_time;
-    toggle_output(0);
+        //falling edge
+        if(!digitalRead(IN_PINS[0])){
+            function0();
+        }
+        if(!digitalRead(IN_PINS[1])){
+          function1();
+        }
+        if(!digitalRead(IN_PINS[2])){
+          function2();
+        }
 #ifdef VONIA
-    int val = read_output(0);
-    write_output(1, val); //toggle leds
-    write_output(2, val); //toggle fan
-    if(val == LIGHTS_OFF){
-      write_output(3, LIGHTS_OFF); //turn off mirror
-      ledsOffTime = millis(); //save off time for PIR "debounce"
+        if(digitalRead(IN_PINS[3])){
+          function3();
+        }
+#else
+        if(!digitalRead(IN_PINS[3])){
+          function3();
+        }
+#endif
+
     }
-#endif
-  }
+    intStartTime = now;
+    interrupts();
 
 }
 
 
-ICACHE_RAM_ATTR void interrupt1(void){
-
-  // tcp_write_string("int1\n");
-  unsigned long interrupt_time = millis();
-
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS && !digitalRead(IN_PINS[1]))
-  {
-      debounceLastTime = interrupt_time;
-  #ifdef KORIDORIUS
-      toggle_output(1);
-  #else
-      toggle_output(2);
-  #endif
-
-  }
-}
-
-
-ICACHE_RAM_ATTR void interrupt2(void){
-
-  // tcp_write_string("int2\n");
-  unsigned long interrupt_time = millis();
-
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS && !digitalRead(IN_PINS[2]))
-  {
-    debounceLastTime = interrupt_time;
-
-  #ifdef KORIDORIUS
-      toggle_output(2);
-  #else
-      int val = toggle_output(1);
-  #endif
-
-#ifdef VONIA
-    pirStartTime = 0;
-    if(val == LIGHTS_OFF)
-    ledsOffTime = millis(); //save off time for PIR "debounce"
-#endif
-  }
-}
-
-
-ICACHE_RAM_ATTR void interrupt3(void){
-
-  // tcp_write_string("int3\n");
-  unsigned long interrupt_time = millis();
-
-  // If interrupts come faster than 200ms, assume it's a bounce and ignore
-  if ((interrupt_time - debounceLastTime) > DEBOUNCE_DELAY_MS)
-  {
-    debounceLastTime = interrupt_time;
-
-#ifdef VONIA
-    if(millis() - ledsOffTime > pirDebounce){
-      write_output(1, LIGHTS_ON);
-      pirStartTime = millis();
-    }
-#endif
-#ifdef KORIDORIUS
-      write_output(0, LIGHTS_ON);
-      pirStartTime = millis();
-#endif
-#ifdef MIEGAMASIS
-    int val = toggle_output(3);
-#endif
-  }
-}
-
-
-#ifdef VONIA
-void check_io_timeouts(){
-  //leds are on & main light is off & timeout is active & timeout occured
-  if(read_output(1) == LIGHTS_ON && read_output(0) == LIGHTS_OFF &&
-  ((pirStartTime + pirTimeout) < millis()) && pirStartTime > 0){
-      debounceLastTime = millis();
-      write_output(1, LIGHTS_OFF);
-      ledsOffTime = millis(); //save off time for PIR "debounce"
-  }
-}
-#endif
 
 
 
-#ifdef KORIDORIUS
-void check_io_timeouts(){
-  //leds are on & main light is off & timeout is active & timeout occured
-  if(read_output(0) == LIGHTS_ON  &&
-  ((pirStartTime + pirTimeout) < millis()) && pirStartTime > 0){
-      debounceLastTime = millis();
-      write_output(0, LIGHTS_OFF);
-      ledsOffTime = millis(); //save off time for PIR "debounce"
-  }
-}
-#endif
+
+/*ICACHE_RAM_ATTR void interrupt0(void){*/
+
+  /*//falling edge*/
+  /*if(!digitalRead(IN_PINS[0])){*/
+    /*intStartTime0 = millis();*/
+  /*}*/
+  /*else{ //rising edge*/
+    /*if(!intStartTime0) return;*/
+    /*unsigned long now = millis();*/
+    /*int32_t delta = now - intStartTime0;*/
+    /*if(delta < 0) delta += 0xFFFFFFFF;*/
+
+    /*if(delta > CLICK_MIN_DURATION && delta < CLICK_MAX_DURATION){*/
+      /*function0();*/
+    /*}*/
+    /*intStartTime0 = 0;*/
+  /*}*/
+
+/*}*/
+
+
+
+
+/*ICACHE_RAM_ATTR void interrupt1(void){*/
+
+  /*//falling edge*/
+  /*if(!digitalRead(IN_PINS[1])){*/
+    /*intStartTime1 = millis();*/
+  /*}*/
+  /*//rising edge*/
+  /*else{*/
+    /*if(!intStartTime1) return;*/
+    /*unsigned long now = millis();*/
+    /*int32_t delta = now - intStartTime1;*/
+    /*if(delta < 0) delta += 0xFFFFFFFF;*/
+
+    /*if(delta > CLICK_MIN_DURATION && delta < CLICK_MAX_DURATION){*/
+      /*function1();*/
+    /*}*/
+    /*intStartTime1 = 0;*/
+  /*}*/
+
+/*}*/
+
+
+
+/*ICACHE_RAM_ATTR void interrupt2(void){*/
+
+  /*//falling edge*/
+  /*if(!digitalRead(IN_PINS[2])){*/
+    /*intStartTime2 = millis();*/
+  /*}*/
+  /*//rising edge*/
+  /*else{*/
+    /*if(!intStartTime2) return;*/
+    /*unsigned long now = millis();*/
+    /*int32_t delta = now - intStartTime2;*/
+    /*if(delta < 0) delta += 0xFFFFFFFF;*/
+
+    /*if(delta > CLICK_MIN_DURATION && delta < CLICK_MAX_DURATION){*/
+      /*function2();*/
+    /*}*/
+    /*intStartTime2 = 0;*/
+  /*}*/
+
+/*}*/
+
+
+/*ICACHE_RAM_ATTR void interrupt3(void){*/
+
+      /*function3();*/
+/*}*/
