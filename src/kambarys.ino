@@ -7,6 +7,7 @@
 #include <time.h>
 //#include <Time.h>
 #include "DHTesp.h"
+#include <ArduinoOTA.h>
 
 
 DHTesp dht;
@@ -29,7 +30,7 @@ uint8_t Data = 0;
 
 int wifi_reconnect_tries = 0;
 long wifi_reconnect_time = 0L;
-long wifi_check_time = 15000L;
+uint32_t wifi_check_time = 15000L;
 uint8_t DataChanged = false;
 
 #ifdef STATIC_IP
@@ -163,38 +164,34 @@ void update_info(){
   Setup Function
  *******************************/
 
-void setup() {
+ void setup() {
 
 #ifdef DEBUG
-    Serial.begin(9600);
+   Serial.begin(9600);
 #endif
-    init_io();
+   init_io();
 
-    WiFi.mode(WIFI_STA);
+   WiFi.mode(WIFI_STA);
 #ifdef STATIC_IP
- // Configures static IP address
-  WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS);
+   // Configures static IP address
+   WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS);
 #endif
-    connectWiFi();
-    //start tcp server
-    server.begin();
+   connectWiFi();
+   //start tcp server
+   server.begin();
 
 #ifdef MQQT
-    mqqt_client.setServer(MQQT_SERVER_IP, 1883);
-    mqqt_client.setCallback(MQQT_callback);
+   mqqt_client.setServer(MQQT_SERVER_IP, 1883);
+   mqqt_client.setCallback(MQQT_callback);
 #endif
 
-    //configure ntp server and get time
-    /*configTime(3 * 3600, 0, "pool.ntp.org", "time.nist.gov");*/
-    /*while (!time(nullptr)) {*/
-        /*delay(1000);*/
-    /*}*/
+   OTA_init();
 
-    dht.setup(DHT_PIN,DHTesp::DHT22); // data pin 2
-    update_timer_time = millis();
+   dht.setup(DHT_PIN,DHTesp::DHT22); // data pin 2
+   update_timer_time = millis();
 
-    update_info();
-}
+   update_info();
+ }
 
 /*******************************
   Loop Function
@@ -225,6 +222,7 @@ void loop()
     }
 #endif
 
+    ArduinoOTA.handle();
     delay(100);
 
 }
